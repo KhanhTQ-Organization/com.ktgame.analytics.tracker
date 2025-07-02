@@ -1,0 +1,5 @@
+<linker>
+    <assembly fullname="com.ktgame.analytics.tracker" ignoreIfMissing="1">
+        <namespace fullname="com.ktgame.analytics.tracker" preserve="all"/>
+    </assembly>
+</linker>
