@@ -1,0 +1,29 @@
+{
+  "events": [
+    {
+      "eventName": "event_name_1",
+      "parameters": [
+        {
+          "keyName": "param_name_1",
+          "valueType": "INT"
+        },
+        {
+          "keyName": "param_name_2",
+          "valueType": "STRING"
+        },
+        {
+          "keyName": "param_name_3",
+          "valueType": "FLOAT"
+        },
+        {
+          "keyName": "param_name_4",
+          "valueType": "BOOL"
+        }
+      ]
+    },
+    {
+      "eventName": "event_name_2",
+      "parameters": []
+    }
+  ]
+}

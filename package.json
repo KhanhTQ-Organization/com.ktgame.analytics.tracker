@@ -1,0 +1,15 @@
+{
+  "name": "com.ktgame.analytics.tracker",
+  "version": "1.0.0",
+  "displayName": "com.ktgame.analytics.tracker",
+  "description": "KTgame Tracker",
+  "author": {
+    "name": "ktgame",
+    "email": "khanhquang0912qh@gmail.com",
+    "url": "https://github.com/KhanhTQ-hub"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}

@@ -1,0 +1,16 @@
+{
+    "name": "com.ktgame.analytics.tracker.editor",
+    "rootNamespace": "com.ktgame.analytics.tracker.editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
