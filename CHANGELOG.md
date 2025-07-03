@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/compare/v1.0.3...v1.0.4) (2025-07-03)
+
+
+### Bug Fixes
+
+* scope ([c6b7249](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/commit/c6b724993d437f942d02e7f52a3e1f44be5d3213))
+
 ## [1.0.3](https://github.com/KhanhTQ-hub/com.ktgame.analytics.tracker/compare/v1.0.2...v1.0.3) (2025-07-03)
 
 
