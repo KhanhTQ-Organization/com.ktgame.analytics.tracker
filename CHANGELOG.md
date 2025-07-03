@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/KhanhTQ-hub/com.ktgame.analytics.tracker/compare/v1.0.2...v1.0.3) (2025-07-03)
+
+
+### Bug Fixes
+
+* update event ([a885b02](https://github.com/KhanhTQ-hub/com.ktgame.analytics.tracker/commit/a885b0282728fe731d229b234133953112715196))
+
 ## [1.0.2](https://github.com/KhanhTQ-hub/com.ktgame.analytics.tracker/compare/v1.0.1...v1.0.2) (2025-07-03)
 
 
