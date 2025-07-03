@@ -6,8 +6,6 @@ using UnityEngine;
 
 #if ADJUST_ANALYTICS
 using com.ktgame.core.di;
-using com.ktgame.analytics.provider.adjust;
-using com.ktgame.services.device;
 #endif
 
 namespace com.ktgame.analytics.tracker.adjust
@@ -26,10 +24,6 @@ namespace com.ktgame.analytics.tracker.adjust
 
 		public Action<string> OnDeferredDeeplink { get; set; }
 
-#if ADJUST_ANALYTICS
-		[Inject] private readonly IDeviceService _deviceService;
-#endif
-
 		public UniTask OnInitialize(IArchitecture architecture)
 		{
 			var settings = AdjustAnalyticServiceSettings.Instance;
@@ -40,10 +34,6 @@ namespace com.ktgame.analytics.tracker.adjust
 				: AdjustTrackingEnvironment.Sandbox;
 
 			var externalDeviceId = string.Empty;
-			if (_deviceService != null)
-			{
-				externalDeviceId = _deviceService.ID;
-			}
 
 			Provider = new AdjustTrackingProvider.Builder(settings.AppToken, environment)
 				.WithLogLevel(settings.LogLevel)

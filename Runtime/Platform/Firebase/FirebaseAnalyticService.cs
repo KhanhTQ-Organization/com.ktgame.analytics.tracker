@@ -7,8 +7,6 @@ using UnityEngine;
 using Firebase;
 using com.ktgame.core.di;
 using com.ktgame.services.firebase;
-using com.ktgame.analytics.provider.firebase;
-using com.ktgame.services.device;
 #endif
 
 namespace com.ktgame.analytics.tracker.firebase
@@ -18,11 +16,6 @@ namespace com.ktgame.analytics.tracker.firebase
 	{
 		public int Priority => 1;
 		public bool Initialized { get; set; }
-
-#if FIREBASE_ANALYTICS
-		[Inject] private readonly IDeviceService _deviceService;
-#endif
-
 		private IAnalyticTracker _tracker;
 		private ITrackingProvider _provider;
 
@@ -33,11 +26,6 @@ namespace com.ktgame.analytics.tracker.firebase
             await UniTask.WaitUntil(() => firebaseService.Initialized);
             
             var externalDeviceId = string.Empty;
-            if (_deviceService != null)
-            {
-                externalDeviceId = _deviceService.ID;
-            }
-            
             _provider = new FirebaseTrackingProvider();
             _provider.SetUserId(externalDeviceId);
 #else
