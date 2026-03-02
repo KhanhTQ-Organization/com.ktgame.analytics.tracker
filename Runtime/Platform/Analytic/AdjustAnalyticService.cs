@@ -28,23 +28,23 @@ namespace com.ktgame.analytics.tracker.adjust
 		{
 			var settings = AdjustAnalyticServiceSettings.Instance;
 
-#if ADJUST_ANALYTICS
-			var environment = settings.Environment == Environment.Production
-				? AdjustTrackingEnvironment.Production
-				: AdjustTrackingEnvironment.Sandbox;
-
-			var externalDeviceId = string.Empty;
-
-			Provider = new AdjustTrackingProvider.Builder(settings.AppToken, environment)
-				.WithLogLevel(settings.LogLevel)
-				.WithSendInBackground(settings.SendInBackground)
-				.WithLaunchDeferredDeeplink(settings.LaunchDeferredDeeplink)
-				.WithDeferredDeeplinkCallbackId(OnDeferredDeeplinkHandler)
-				.WithExternalDeviceId(externalDeviceId)
-				.Build();
-#else
+// #if ADJUST_ANALYTICS
+// 			var environment = settings.Environment == Environment.Production
+// 				? AdjustTrackingEnvironment.Production
+// 				: AdjustTrackingEnvironment.Sandbox;
+//
+// 			var externalDeviceId = string.Empty;
+//
+// 			Provider = new AdjustTrackingProvider.Builder(settings.AppToken, environment)
+// 				.WithLogLevel(settings.LogLevel)
+// 				.WithSendInBackground(settings.SendInBackground)
+// 				.WithLaunchDeferredDeeplink(settings.LaunchDeferredDeeplink)
+// 				.WithDeferredDeeplinkCallbackId(OnDeferredDeeplinkHandler)
+// 				.WithExternalDeviceId(externalDeviceId)
+// 				.Build();
+// #else
 			Provider = new NullTrackingProvider();
-#endif
+//#endif
 
 			Tracker = new AnalyticTracker(Provider);
 			return UniTask.CompletedTask;
