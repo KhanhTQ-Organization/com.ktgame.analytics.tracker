@@ -3,7 +3,8 @@
     "rootNamespace": "com.ktgame.analytics.tracker.editor",
     "references": [
         "GUID:ea2ae37156ab74bd0b7bf06641413d82",
-        "GUID:ec2d2a00ff2614845886215098fd295a"
+        "GUID:ec2d2a00ff2614845886215098fd295a",
+        "GUID:07fa84c8891424e60a3080653dd9d1e0"
     ],
     "includePlatforms": [
         "Editor"

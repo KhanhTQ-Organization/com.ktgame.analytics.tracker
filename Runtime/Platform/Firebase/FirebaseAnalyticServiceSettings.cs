@@ -12,213 +12,218 @@ using UnityEditor;
 
 namespace com.ktgame.analytics.tracker.firebase
 {
-    public enum ValueType
-    {
-        Int,
-        Long,
-        Float,
-        Double,
-        String
-    }
+	public enum ValueType
+	{
+		Int,
+		Long,
+		Float,
+		Double,
+		String
+	}
 
-    [Serializable]
-    public struct EventData
-    {
-        [Serializable]
-        public struct Param
-        {
-            [SerializeField] private ValueType type;
-            [SerializeField] private string key;
+	[Serializable]
+	public class EventData
+	{
+		[Serializable]
+		public struct Param
+		{
+			[SerializeField] private ValueType type;
+			[SerializeField] private string key;
 
-            public ValueType Type => type;
+			public ValueType Type
+			{
+				get => type;
+				set => type = value;
+			}
 
-            public string Key => key;
-        }
+			public string Key
+			{
+				get => key;
+				set => key = value;
+			}
+		}
 
-        [Serializable]
-        public struct Event
-        {
-            [SerializeField] [FoldoutGroup("$name", expanded: false)]
-            private string name;
+		[Serializable]
+		public class Event
+		{
+			[SerializeField] [FoldoutGroup("$name", expanded: false)] private string name;
 
-            [SerializeField] [FoldoutGroup("$name", expanded: false)]
-            private List<Param> @params;
+			[SerializeField] [FoldoutGroup("$name", expanded: false)] private List<Param> @params = new List<Param>();
 
-            public string Name => name;
+			public string Name => name;
+			public List<Param> Params => @params;
+		}
 
-            public List<Param> Params => @params;
-        }
+		[SerializeField] private List<Event> events;
 
-        [SerializeField] private List<Event> events;
+		public List<Event> Events
+		{
+			get => events ??= new List<Event>();
+			set => events = value;
+		}
+	}
 
-        public List<Event> Events => events;
-    }
+	[Serializable]
+	public class UserPropertyData
+	{
+		[Serializable]
+		public struct UserProperties
+		{
+			[SerializeField] private string name;
+			public string Name => name;
+		}
 
-    [Serializable]
-    public struct UserPropertyData
-    {
-        [Serializable]
-        public struct UserProperties
-        {
-            [SerializeField] private string name;
-            public string Name => name;
-        }
+		[SerializeField] private List<UserProperties> properties = new List<UserProperties>();
 
-        [SerializeField] private List<UserProperties> properties;
+		public List<UserProperties> Properties
+		{
+			get => properties ??= new List<UserProperties>();
+			set => properties = value;
+		}
+	}
 
-        public List<UserProperties> Properties => properties;
-    }
+	public class FirebaseAnalyticServiceSettings : ServiceSettingsSingleton<FirebaseAnalyticServiceSettings>
+	{
+		public override string PackageName => GetType().Namespace;
 
-    public class FirebaseAnalyticServiceSettings : ServiceSettingsSingleton<FirebaseAnalyticServiceSettings>
-    {
-        public override string PackageName => GetType().Namespace;
+		[SerializeField] private EventData eventData;
 
-        [SerializeField] private EventData eventData;
+		[SerializeField] private UserPropertyData userPropertyData;
 
-        [SerializeField] private UserPropertyData userPropertyData;
+		public EventData EventData
+		{
+			get => eventData;
+			set => eventData = value;
+		}
 
-        public EventData EventData => eventData;
+		public UserPropertyData UserPropertyData
+		{
+			get => userPropertyData;
+			set => userPropertyData = value;
+		}
 
 #if UNITY_EDITOR
-        [Button("Generate Event")]
-        private void GenerateEvent()
-        {
-            if (eventData.Events.Count <= 0) return;
-            var builder = new StringBuilder();
-            builder.Append("using com.ktgame.analytics.tracker;").Append("\n").Append("\n");
-            builder.AppendFormat("namespace {0}", PackageName).Append("\n");
-            builder.Append("{").Append("\n");
-            foreach (var @event in eventData.Events)
-            {
-                builder.Append("\t").AppendFormat("public struct FirebaseTracking_{0} : IEventData ", @event.Name).Append("\n");
-                builder.Append("\t").Append("{").Append("\n");
-                builder.Append("\t\t").AppendFormat("private const string EventName = \"{0}\"", @event.Name).Append(";").Append("\n");
-                var paramString = "";
-                for (var i = 0; i < @event.Params.Count; i++)
-                {
-                    var param = @event.Params[i];
-                    switch (param.Type)
-                    {
-                        case ValueType.Int:
-                            paramString += $"int {param.Key.Trim()}";
-                            builder.Append("\t\t").AppendFormat("public int {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-                            break;
-                        case ValueType.Long:
-                            paramString += $"long {param.Key.Trim()}";
-                            builder.Append("\t\t").AppendFormat("public long {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-                            break;
-                        case ValueType.Float:
-                            paramString += $"float {param.Key.Trim()}";
-                            builder.Append("\t\t").AppendFormat("public float {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-                            break;
-                        case ValueType.Double:
-                            paramString += $"double {param.Key.Trim()}";
-                            builder.Append("\t\t").AppendFormat("public double {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-                            break;
-                        case ValueType.String:
-                            paramString += $"string {param.Key.Trim()}";
-                            builder.Append("\t\t").AppendFormat("public string {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-                            break;
-                        default:
-                            paramString += $"string {param.Key.Trim()}";
-                            builder.Append("\t\t").AppendFormat("public string {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-                            break;
-                    }
+		[Button("Generate Event")]
+		private void GenerateEvent()
+		{
+			if (eventData == null || eventData.Events == null || eventData.Events.Count == 0)
+				return;
 
-                    if (i < @event.Params.Count - 1) paramString += ", ";
-                }
+			var builder = new StringBuilder();
 
-                if (@event.Params.Count > 0)
-                {
-                    builder.Append("\n");
-                    builder.Append("\t\t").AppendFormat("public FirebaseTracking_{0}", @event.Name).Append("(").Append(paramString).Append(")").Append("\n");
-                    builder.Append("\t\t").Append("{").Append("\n");
-                    foreach (var param in @event.Params)
-                    {
-                        builder.Append("\t\t\t").AppendFormat("this.{0} = {1}", param.Key, param.Key).Append(";").Append("\n");
-                    }
+			builder.AppendLine("using com.ktgame.analytics.tracker;");
+			builder.AppendLine();
+			builder.AppendLine($"namespace {PackageName}");
+			builder.AppendLine("{");
 
-                    builder.Append("\t\t").Append("}").Append("\n");
-                }
+			foreach (var e in eventData.Events)
+			{
+				if (string.IsNullOrWhiteSpace(e.Name))
+					continue;
 
-                builder.Append("\t").Append("}").Append("\n");
-                builder.Append("\n");
-            }
+				var eventName = Sanitize(e.Name);
 
-            builder.Append("}");
-            var fileText = builder.ToString();
-            
-            var saveFolderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
-            var saveFilePath = Path.Combine(saveFolderPath, "FirebaseTrackingGenerate.cs");
+				builder.AppendLine($"\tpublic struct FirebaseTracking_{eventName} : IEventData");
+				builder.AppendLine("\t{");
+				builder.AppendLine($"\t\tprivate const string EventName = \"{e.Name}\";");
 
-            if (!Directory.Exists(saveFolderPath))
-            {
-                Directory.CreateDirectory(saveFolderPath);
-            }
+				var paramDefs = new List<string>();
 
-            if (File.Exists(saveFilePath))
-            {
-                File.Delete(saveFilePath);
-            }
+				foreach (var param in e.Params)
+				{
+					if (string.IsNullOrWhiteSpace(param.Key))
+						continue;
 
-            if (File.Exists(saveFilePath + ".meta"))
-            {
-                File.Delete(saveFilePath + ".meta");
-            }
+					var key = Sanitize(param.Key);
+					var type = TypeMap.TryGetValue(param.Type, out var mappedType)
+						? mappedType
+						: "string";
 
-            File.WriteAllText(saveFilePath, fileText, Encoding.UTF8);
-            AssetDatabase.ImportAsset(saveFilePath);
-            AssetDatabase.Refresh();
-        }
+					paramDefs.Add($"{type} {key}");
+					builder.AppendLine($"\t\tpublic {type} {key} {{ get; }}");
+				}
 
-        [Button("Generate User Property")]
-        private void GenerateUserProperty()
-        {
-            var builder = new StringBuilder();
-            builder.Append("using com.ktgame.analytics.tracker;").Append("\n").Append("\n");
-            builder.AppendFormat("namespace {0}", PackageName).Append("\n");
-            builder.Append("{").Append("\n");
-            foreach (var property in userPropertyData.Properties)
-            {
-                builder.Append("\t").AppendFormat("public struct FirebaseUserProperty_{0} : IUserPropertyData ", property.Name).Append("\n");
-                builder.Append("\t").Append("{").Append("\n");
-                builder.Append("\t\t").AppendFormat("private const string PropertyName = \"{0}\"", property.Name).Append(";").Append("\n");
-                builder.Append("\t\t").Append("public string Value ").Append("{ get; }").Append("\n");
-                builder.Append("\n");
-                builder.Append("\t\t").AppendFormat("public FirebaseUserProperty_{0}", property.Name).Append("(").Append("string value").Append(")")
-                    .Append("\n");
-                builder.Append("\t\t").Append("{").Append("\n");
-                builder.Append("\t\t\t").Append("this.Value = value").Append(";").Append("\n");
-                builder.Append("\t\t").Append("}").Append("\n");
-                builder.Append("\t").Append("}").Append("\n");
-                builder.Append("\n");
-            }
+				if (paramDefs.Count > 0)
+				{
+					builder.AppendLine();
+					builder.AppendLine($"\t\tpublic FirebaseTracking_{eventName}({string.Join(", ", paramDefs)})");
+					builder.AppendLine("\t\t{");
 
-            builder.Append("}");
-            var fileText = builder.ToString();
-            
-            var saveFolderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
-            var saveFilePath = Path.Combine(saveFolderPath, "FirebaseUserPropertyGenerate.cs");
+					foreach (var param in e.Params)
+					{
+						if (string.IsNullOrWhiteSpace(param.Key))
+							continue;
 
-            if (!Directory.Exists(saveFolderPath))
-            {
-                Directory.CreateDirectory(saveFolderPath);
-            }
+						var key = Sanitize(param.Key);
+						builder.AppendLine($"\t\t\tthis.{key} = {key};");
+					}
 
-            if (File.Exists(saveFilePath))
-            {
-                File.Delete(saveFilePath);
-            }
+					builder.AppendLine("\t\t}");
+				}
 
-            if (File.Exists(saveFilePath + ".meta"))
-            {
-                File.Delete(saveFilePath + ".meta");
-            }
+				builder.AppendLine("\t}");
+				builder.AppendLine();
+			}
 
-            File.WriteAllText(saveFilePath, fileText, Encoding.UTF8);
-            AssetDatabase.ImportAsset(saveFilePath);
-            AssetDatabase.Refresh();
-        }
+			builder.AppendLine("}");
+
+			SaveToFile("FirebaseTrackingGenerate.cs", builder.ToString());
+		}
+
+		private void SaveToFile(string fileName, string content)
+		{
+			var folderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
+			var filePath = Path.Combine(folderPath, fileName);
+
+			if (!Directory.Exists(folderPath))
+			{
+				Directory.CreateDirectory(folderPath);
+			}
+
+			if (File.Exists(filePath))
+			{
+				File.Delete(filePath);
+			}
+
+			if (File.Exists(filePath + ".meta"))
+			{
+				File.Delete(filePath + ".meta");
+			}
+
+			File.WriteAllText(filePath, content, Encoding.UTF8);
+
+			AssetDatabase.ImportAsset(filePath);
+			AssetDatabase.Refresh();
+		}
+
+		private static readonly Dictionary<ValueType, string> TypeMap = new()
+		{
+			{ ValueType.Int, "int" },
+			{ ValueType.Long, "long" },
+			{ ValueType.Float, "float" },
+			{ ValueType.Double, "double" },
+			{ ValueType.String, "string" }
+		};
+
+		private static string Sanitize(string input)
+		{
+			if (string.IsNullOrWhiteSpace(input))
+			{
+				return "_invalid";
+			}
+
+			var result = input.Trim();
+
+			result = result.Replace(" ", "_")
+				.Replace("-", "_");
+
+			if (char.IsDigit(result[0]))
+			{
+				result = "_" + result;
+			}
+
+			return result;
+		}
 #endif
-    }
+	}
 }

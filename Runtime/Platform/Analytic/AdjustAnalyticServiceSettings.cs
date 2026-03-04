@@ -32,38 +32,39 @@ namespace com.ktgame.analytics.tracker.adjust
 	}
 
 	[Serializable]
-	public struct EventData
+	public class EventData
 	{
 		[Serializable]
-		public struct Param
+		public class Param
 		{
 			[SerializeField] private ValueType type;
 			[SerializeField] private string key;
 
 			public ValueType Type => type;
-
 			public string Key => key;
 		}
 
 		[Serializable]
-		public struct Event
+		public class Event
 		{
 			[SerializeField] [FoldoutGroup("$name", expanded: false)] private string name;
 
 			[SerializeField] [FoldoutGroup("$name", expanded: false)] private string id;
 
-			[SerializeField] [FoldoutGroup("$name", expanded: false)] private List<Param> @params;
+			[SerializeField] [FoldoutGroup("$name", expanded: false)] private List<Param> @params = new();
 
 			public string Name => name;
-
 			public string Id => id;
-
-			public List<Param> Params => @params;
+			public List<Param> Params => @params ??= new List<Param>();
 		}
 
-		[SerializeField] private List<Event> events;
+		[SerializeField] private List<Event> events = new();
 
-		public List<Event> Events => events;
+		public List<Event> Events
+		{
+			get => events ??= new List<Event>();
+			set => events = value;
+		}
 	}
 
 	public class AdjustAnalyticServiceSettings : ServiceSettingsSingleton<AdjustAnalyticServiceSettings>
@@ -72,120 +73,145 @@ namespace com.ktgame.analytics.tracker.adjust
 
 		[SerializeField] private string appToken;
 		[SerializeField] private Environment environment;
+
 #if ADJUST_ANALYTICS
-		[SerializeField] private AdjustLogLevel logLevel = AdjustLogLevel.Info;
+        [SerializeField] private AdjustLogLevel logLevel = AdjustLogLevel.Info;
 #endif
+
 		[SerializeField] private bool sendInBackground = true;
 		[SerializeField] private bool launchDeferredDeeplink = false;
-		[SerializeField] private EventData eventData;
+		[SerializeField] private EventData eventData = new();
 
 		public string AppToken => appToken;
-
 		public Environment Environment => environment;
-#if ADJUST_ANALYTICS
-		public AdjustLogLevel LogLevel => logLevel;
-#endif
-		public bool SendInBackground => sendInBackground;
-		
-		public bool LaunchDeferredDeeplink => launchDeferredDeeplink;
 
+#if ADJUST_ANALYTICS
+        public AdjustLogLevel LogLevel => logLevel;
+#endif
+
+		public bool SendInBackground => sendInBackground;
+		public bool LaunchDeferredDeeplink => launchDeferredDeeplink;
 		public EventData EventData => eventData;
 
 #if UNITY_EDITOR
-		[Button("Generate Event")]
-		private void GenerateEvent()
+
+		private static readonly Dictionary<ValueType, string> TypeMap = new()
 		{
-			if (eventData.Events.Count <= 0)
+			{ ValueType.Int, "int" },
+			{ ValueType.Float, "float" },
+			{ ValueType.String, "string" },
+			{ ValueType.Boolean, "bool" }
+		};
+
+		private static string Sanitize(string input)
+		{
+			if (string.IsNullOrWhiteSpace(input))
+			{
+				return "_invalid";
+			}
+
+			var result = input.Trim();
+			result = Regex.Replace(result, "[^a-zA-Z0-9_]", "");
+
+			if (string.IsNullOrEmpty(result))
+			{
+				return "_invalid";
+			}
+
+			if (char.IsDigit(result[0]))
+			{
+				result = "_" + result;
+			}
+
+			return result;
+		}
+
+		[Button("Generate Event")]
+		public void GenerateEventEditor()
+		{
+			if (eventData == null || eventData.Events.Count == 0)
 				return;
 
 			var builder = new StringBuilder();
-			builder.Append("using com.ktgame.analytics.tracker;").Append("\n").Append("\n");
-			builder.AppendFormat("namespace {0}", PackageName).Append("\n");
-			builder.Append("{").Append("\n");
-			foreach (var @event in eventData.Events)
-			{
-				builder.Append("\t").AppendFormat("public struct AdjustTracking_{0} : IEventData ", RemoveSpecialCharacters(@event.Name)).Append("\n");
-				builder.Append("\t").Append("{").Append("\n");
-				builder.Append("\t\t").AppendFormat("private const string EventName = \"{0}\"", @event.Id).Append(";").Append("\n");
-				var paramString = "";
-				for (var i = 0; i < @event.Params.Count; i++)
-				{
-					var param = @event.Params[i];
-					switch (param.Type)
-					{
-						case ValueType.Int:
-							paramString += $"int {param.Key.Trim()}";
-							builder.Append("\t\t").AppendFormat("public int {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-							break;
-						case ValueType.Float:
-							paramString += $"float {param.Key.Trim()}";
-							builder.Append("\t\t").AppendFormat("public float {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-							break;
-						case ValueType.String:
-							paramString += $"string {param.Key.Trim()}";
-							builder.Append("\t\t").AppendFormat("public string {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-							break;
-						case ValueType.Boolean:
-							paramString += $"bool {param.Key.Trim()}";
-							builder.Append("\t\t").AppendFormat("public bool {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-							break;
-						default:
-							paramString += $"string {param.Key.Trim()}";
-							builder.Append("\t\t").AppendFormat("public string {0} ", param.Key.Trim()).Append("{ get; }").Append("\n");
-							break;
-					}
 
-					if (i < @event.Params.Count - 1)
-						paramString += ", ";
+			builder.AppendLine("using com.ktgame.analytics.tracker;");
+			builder.AppendLine();
+			builder.AppendLine($"namespace {PackageName}");
+			builder.AppendLine("{");
+
+			foreach (var e in eventData.Events)
+			{
+				if (string.IsNullOrWhiteSpace(e.Name) || string.IsNullOrWhiteSpace(e.Id))
+					continue;
+
+				var structName = Sanitize(e.Name);
+				var paramDefs = new List<string>();
+
+				builder.AppendLine($"\tpublic struct AdjustTracking_{structName} : IEventData");
+				builder.AppendLine("\t{");
+				builder.AppendLine($"\t\tprivate const string EventName = \"{e.Id}\";");
+
+				foreach (var param in e.Params)
+				{
+					if (string.IsNullOrWhiteSpace(param.Key))
+						continue;
+
+					var key = Sanitize(param.Key);
+					var type = TypeMap.TryGetValue(param.Type, out var mapped)
+						? mapped
+						: "string";
+
+					paramDefs.Add($"{type} {key}");
+					builder.AppendLine($"\t\tpublic {type} {key} {{ get; }}");
 				}
 
-				if (@event.Params.Count > 0)
+				if (paramDefs.Count > 0)
 				{
-					builder.Append("\n");
-					builder.Append("\t\t").AppendFormat("public AdjustTracking_{0}", @event.Name).Append("(").Append(paramString).Append(")").Append("\n");
-					builder.Append("\t\t").Append("{").Append("\n");
-					foreach (var param in @event.Params)
+					builder.AppendLine();
+					builder.AppendLine($"\t\tpublic AdjustTracking_{structName}({string.Join(", ", paramDefs)})");
+					builder.AppendLine("\t\t{");
+
+					foreach (var param in e.Params)
 					{
-						builder.Append("\t\t\t").AppendFormat("this.{0} = {1}", param.Key, param.Key).Append(";").Append("\n");
+						if (string.IsNullOrWhiteSpace(param.Key))
+							continue;
+
+						var key = Sanitize(param.Key);
+						builder.AppendLine($"\t\t\tthis.{key} = {key};");
 					}
 
-					builder.Append("\t\t").Append("}").Append("\n");
+					builder.AppendLine("\t\t}");
 				}
 
-				builder.Append("\t").Append("}").Append("\n");
-				builder.Append("\n");
+				builder.AppendLine("\t}");
+				builder.AppendLine();
 			}
 
-			builder.Append("}");
-			var fileText = builder.ToString();
+			builder.AppendLine("}");
 
-			var saveFolderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
-			var saveFilePath = Path.Combine(saveFolderPath, "AdjustTrackingGenerate.cs");
+			SaveToFile("AdjustTrackingGenerate.cs", builder.ToString());
+		}
 
-			if (!Directory.Exists(saveFolderPath))
-			{
-				Directory.CreateDirectory(saveFolderPath);
-			}
+		private void SaveToFile(string fileName, string content)
+		{
+			var folderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
+			var filePath = Path.Combine(folderPath, fileName);
 
-			if (File.Exists(saveFilePath))
-			{
-				File.Delete(saveFilePath);
-			}
+			if (!Directory.Exists(folderPath))
+				Directory.CreateDirectory(folderPath);
 
-			if (File.Exists(saveFilePath + ".meta"))
-			{
-				File.Delete(saveFilePath + ".meta");
-			}
+			if (File.Exists(filePath))
+				File.Delete(filePath);
 
-			File.WriteAllText(saveFilePath, fileText, Encoding.UTF8);
-			AssetDatabase.ImportAsset(saveFilePath);
+			if (File.Exists(filePath + ".meta"))
+				File.Delete(filePath + ".meta");
+
+			File.WriteAllText(filePath, content, Encoding.UTF8);
+
+			AssetDatabase.ImportAsset(filePath);
 			AssetDatabase.Refresh();
 		}
 
-		private static string RemoveSpecialCharacters(string str)
-		{
-			return Regex.Replace(str, "[^a-zA-Z0-9_]+", "", RegexOptions.Compiled);
-		}
 #endif
 	}
 }
