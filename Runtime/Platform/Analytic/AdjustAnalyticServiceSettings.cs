@@ -4,6 +4,10 @@ using UnityEngine;
 using Sirenix.OdinInspector;
 using com.ktgame.core;
 
+#if ADJUST_ANALYTICS
+using AdjustSdk;
+#endif
+
 #if UNITY_EDITOR
 using System.IO;
 using System.Text;
@@ -68,7 +72,9 @@ namespace com.ktgame.analytics.tracker.adjust
 
 		[SerializeField] private string appToken;
 		[SerializeField] private Environment environment;
-		[SerializeField] private int logLevel = 1;
+#if ADJUST_ANALYTICS
+		[SerializeField] private AdjustLogLevel logLevel = AdjustLogLevel.Info;
+#endif
 		[SerializeField] private bool sendInBackground = true;
 		[SerializeField] private bool launchDeferredDeeplink = false;
 		[SerializeField] private EventData eventData;
@@ -76,9 +82,9 @@ namespace com.ktgame.analytics.tracker.adjust
 		public string AppToken => appToken;
 
 		public Environment Environment => environment;
-
-		public int LogLevel => logLevel;
-		
+#if ADJUST_ANALYTICS
+		public AdjustLogLevel LogLevel => logLevel;
+#endif
 		public bool SendInBackground => sendInBackground;
 		
 		public bool LaunchDeferredDeeplink => launchDeferredDeeplink;

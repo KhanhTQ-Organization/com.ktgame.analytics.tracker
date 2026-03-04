@@ -3,9 +3,10 @@ using Cysharp.Threading.Tasks;
 using com.ktgame.analytics.tracker;
 using com.ktgame.core;
 using UnityEngine;
+using com.ktgame.core.di;
 
 #if ADJUST_ANALYTICS
-using com.ktgame.core.di;
+using AdjustSdk;
 #endif
 
 namespace com.ktgame.analytics.tracker.adjust
@@ -28,25 +29,27 @@ namespace com.ktgame.analytics.tracker.adjust
 		{
 			var settings = AdjustAnalyticServiceSettings.Instance;
 
-// #if ADJUST_ANALYTICS
-// 			var environment = settings.Environment == Environment.Production
-// 				? AdjustTrackingEnvironment.Production
-// 				: AdjustTrackingEnvironment.Sandbox;
-//
-// 			var externalDeviceId = string.Empty;
-//
-// 			Provider = new AdjustTrackingProvider.Builder(settings.AppToken, environment)
-// 				.WithLogLevel(settings.LogLevel)
-// 				.WithSendInBackground(settings.SendInBackground)
-// 				.WithLaunchDeferredDeeplink(settings.LaunchDeferredDeeplink)
-// 				.WithDeferredDeeplinkCallbackId(OnDeferredDeeplinkHandler)
-// 				.WithExternalDeviceId(externalDeviceId)
-// 				.Build();
-// #else
-			Provider = new NullTrackingProvider();
-//#endif
+#if ADJUST_ANALYTICS
+			var environment = settings.Environment == Environment.Production
+				? AdjustEnvironment.Production
+				: AdjustEnvironment.Sandbox;
+
+			var externalDeviceId = string.Empty;
+
+			Provider = new AdjustTrackingProvider.Builder(settings.AppToken, environment)
+				.WithLogLevel(settings.LogLevel)
+				.WithSendInBackground(settings.SendInBackground)
+				.WithLaunchDeferredDeeplink(settings.LaunchDeferredDeeplink)
+				.WithDeferredDeeplinkCallback(OnDeferredDeeplinkHandler)
+				.WithExternalDeviceId(externalDeviceId)
+				.Build();
+#else
+            Provider = new NullTrackingProvider();
+#endif
 
 			Tracker = new AnalyticTracker(Provider);
+			Initialized = true;
+
 			return UniTask.CompletedTask;
 		}
 
