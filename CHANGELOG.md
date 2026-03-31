@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/compare/v1.0.6...v1.0.7) (2026-03-31)
+
+
+### Bug Fixes
+
+* update track firebase ([720e1ce](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/commit/720e1ce6ee0d34c8676a0d3694e6cf6d5a4122ca))
+
 ## [1.0.6](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/compare/v1.0.5...v1.0.6) (2026-03-04)
 
 
