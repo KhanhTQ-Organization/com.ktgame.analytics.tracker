@@ -91,7 +91,7 @@ namespace com.ktgame.analytics.tracker.editor
         [Button("Generate Firebase User Property Code")]
         private void GenerateFirebaseUserProperty()
         {
-            _firebaseSettings.GenerateUserPropertyEditor();
+            _firebaseSettings.GenerateUserProperty();
         }
 
 #endif

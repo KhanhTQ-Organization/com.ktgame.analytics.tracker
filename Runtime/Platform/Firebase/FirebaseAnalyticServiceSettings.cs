@@ -104,7 +104,7 @@ namespace com.ktgame.analytics.tracker.firebase
 
 #if UNITY_EDITOR
 		[Button("Generate Event")]
-		private void GenerateEvent()
+		public void GenerateEventEditor()
 		{
 			if (eventData == null || eventData.Events == null || eventData.Events.Count == 0)
 				return;
@@ -168,6 +168,51 @@ namespace com.ktgame.analytics.tracker.firebase
 			builder.AppendLine("}");
 
 			SaveToFile("FirebaseTrackingGenerate.cs", builder.ToString());
+		}
+
+		[Button("Generate User Property")]
+		public void GenerateUserProperty()
+		{
+			if (userPropertyData == null || userPropertyData.Properties == null || userPropertyData.Properties.Count == 0)
+			{
+				Debug.LogWarning("User Property Data is empty. Nothing to generate.");
+				return;
+			}
+
+			var builder = new StringBuilder();
+
+			builder.AppendLine("using com.ktgame.analytics.tracker;");
+			builder.AppendLine();
+			builder.AppendLine($"namespace {PackageName}");
+			builder.AppendLine("{");
+			
+			foreach (var property in userPropertyData.Properties)
+			{
+				if (string.IsNullOrWhiteSpace(property.Name))
+					continue;
+				
+				var sanitizedName = Sanitize(property.Name);
+
+				builder.AppendLine($"\tpublic struct FirebaseUserProperty_{sanitizedName} : IUserPropertyData ");
+				builder.AppendLine("\t{");
+				
+				builder.AppendLine($"\t\tprivate const string PropertyName = \"{property.Name}\";");
+				builder.AppendLine("\t\tpublic string Value { get; }");
+				builder.AppendLine();
+				
+				builder.AppendLine($"\t\tpublic FirebaseUserProperty_{sanitizedName}(string value)");
+				builder.AppendLine("\t\t{");
+				builder.AppendLine("\t\t\tthis.Value = value;");
+				builder.AppendLine("\t\t}");
+        
+				builder.AppendLine("\t}");
+				builder.AppendLine();
+			}
+
+			builder.AppendLine("}");
+			
+			SaveToFile("FirebaseUserPropertyGenerate.cs", builder.ToString());
+			Debug.Log("<color=green>Generate User Property Successful!</color>");
 		}
 
 		private void SaveToFile(string fileName, string content)
