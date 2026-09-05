@@ -66,7 +66,7 @@ namespace com.ktgame.analytics.tracker.editor
         [Title("Firebase Events", Bold = true)]
         [TableList(ShowIndexLabels = true, AlwaysExpanded = true)]
         [ShowInInspector]
-        public List<EventData.Event> FirebaseEvents
+        public List<com.ktgame.analytics.tracker.firebase.EventData.Event> FirebaseEvents
         {
             get => _firebaseSettings.EventData.Events;
             set => _firebaseSettings.EventData.Events = value;
@@ -103,7 +103,7 @@ namespace com.ktgame.analytics.tracker.editor
         [Title("Adjust Events", Bold = true)]
         [TableList(ShowIndexLabels = true, AlwaysExpanded = true)]
         [ShowInInspector]
-        public List<EventData.Event> AdjustEvents
+        public List<com.ktgame.analytics.tracker.adjust.EventData.Event> AdjustEvents
         {
             get => _adjustSettings.EventData.Events;
             set => _adjustSettings.EventData.Events = value;
