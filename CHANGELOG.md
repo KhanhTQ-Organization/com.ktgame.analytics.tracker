@@ -1,3 +1,10 @@
+## [1.0.10](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/compare/v1.0.9...v1.0.10) (2026-11-06)
+
+
+### Bug Fixes
+
+* big update tracking data ([2e20b23](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/commit/2e20b23c9ad6191a70267ebd623f499970e10b0b))
+
 ## [1.0.9](https://github.com/KhanhTQ-Organization/com.ktgame.analytics.tracker/compare/v1.0.8...v1.0.9) (2026-09-05)
 
 
