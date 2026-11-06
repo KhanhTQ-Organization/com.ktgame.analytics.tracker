@@ -16,6 +16,12 @@ namespace com.ktgame.analytics.tracker.editor
 {
     public class AnalyticsTrackerEditor
     {
+        [Title("Tracking Configuration", "Manage analytics events and user properties.", TitleAlignments.Centered)]
+        [InfoBox("Add events and user properties below, then press Generate to update the code in Assets/Scripts/Generated. Names must follow Firebase naming rules.", InfoMessageType.Info)]
+        [PropertyOrder(-10)]
+        [ShowInInspector, HideLabel, DisplayAsString(false)]
+        private string _header = "";
+
         private KTSettingSO _setting;
 
 #if FIREBASE_ANALYTICS
@@ -61,6 +67,15 @@ namespace com.ktgame.analytics.tracker.editor
         #endregion
 
 #if FIREBASE_ANALYTICS
+
+        [PropertySpace(10)]
+        [LabelText("Log Events To Console (QA)")]
+        [ShowInInspector]
+        public bool FirebaseLogEventsToConsole
+        {
+            get => _firebaseSettings.LogEventsToConsole;
+            set => _firebaseSettings.LogEventsToConsole = value;
+        }
 
         [PropertySpace(20)]
         [Title("Firebase Events", Bold = true)]

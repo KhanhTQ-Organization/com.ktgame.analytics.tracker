@@ -1,13 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Sirenix.OdinInspector;
 using com.ktgame.core;
 
 #if UNITY_EDITOR
-using System.IO;
 using System.Text;
-using UnityEditor;
+using System.Text.RegularExpressions;
 #endif
 
 namespace com.ktgame.analytics.tracker.firebase
@@ -18,7 +17,8 @@ namespace com.ktgame.analytics.tracker.firebase
 		Long,
 		Float,
 		Double,
-		String
+		String,
+		Bool
 	}
 
 	[Serializable]
@@ -90,6 +90,15 @@ namespace com.ktgame.analytics.tracker.firebase
 
 		[SerializeField] private UserPropertyData userPropertyData;
 
+		[Tooltip("Log every event / user property to the Console for QA. Should be disabled in release builds.")]
+		[SerializeField] private bool logEventsToConsole;
+
+		public bool LogEventsToConsole
+		{
+			get => logEventsToConsole;
+			set => logEventsToConsole = value;
+		}
+
 		public EventData EventData
 		{
 			get => eventData;
@@ -109,6 +118,8 @@ namespace com.ktgame.analytics.tracker.firebase
 			if (eventData == null || eventData.Events == null || eventData.Events.Count == 0)
 				return;
 
+			ValidateEventsInEditor();
+
 			var builder = new StringBuilder();
 
 			builder.AppendLine("using com.ktgame.analytics.tracker;");
@@ -116,58 +127,47 @@ namespace com.ktgame.analytics.tracker.firebase
 			builder.AppendLine($"namespace {PackageName}");
 			builder.AppendLine("{");
 
+			var hasError = false;
+			var usedStructNames = new HashSet<string>();
+
 			foreach (var e in eventData.Events)
 			{
 				if (string.IsNullOrWhiteSpace(e.Name))
 					continue;
 
-				var eventName = Sanitize(e.Name);
-
-				builder.AppendLine($"\tpublic struct FirebaseTracking_{eventName} : IEventData");
-				builder.AppendLine("\t{");
-				builder.AppendLine($"\t\tprivate const string EventName = \"{e.Name}\";");
-
-				var paramDefs = new List<string>();
+				var structName = $"FirebaseTracking_{Sanitize(e.Name)}";
+				var parameters = new List<TrackingCodeGenerator.GeneratedParam>();
 
 				foreach (var param in e.Params)
 				{
 					if (string.IsNullOrWhiteSpace(param.Key))
 						continue;
 
-					var key = Sanitize(param.Key);
-					var type = TypeMap.TryGetValue(param.Type, out var mappedType)
-						? mappedType
-						: "string";
-
-					paramDefs.Add($"{type} {key}");
-					builder.AppendLine($"\t\tpublic {type} {key} {{ get; }}");
-				}
-
-				if (paramDefs.Count > 0)
-				{
-					builder.AppendLine();
-					builder.AppendLine($"\t\tpublic FirebaseTracking_{eventName}({string.Join(", ", paramDefs)})");
-					builder.AppendLine("\t\t{");
-
-					foreach (var param in e.Params)
+					parameters.Add(new TrackingCodeGenerator.GeneratedParam
 					{
-						if (string.IsNullOrWhiteSpace(param.Key))
-							continue;
-
-						var key = Sanitize(param.Key);
-						builder.AppendLine($"\t\t\tthis.{key} = {key};");
-					}
-
-					builder.AppendLine("\t\t}");
+						TypeName = TypeMap.TryGetValue(param.Type, out var mappedType) ? mappedType : "string",
+						Name = Sanitize(param.Key)
+					});
 				}
 
-				builder.AppendLine("\t}");
-				builder.AppendLine();
+				if (!TrackingCodeGenerator.ValidateEvent($"Event \"{e.Name}\"", structName, parameters, usedStructNames))
+				{
+					hasError = true;
+					continue;
+				}
+
+				TrackingCodeGenerator.AppendEventStruct(builder, structName, e.Name, parameters);
 			}
 
 			builder.AppendLine("}");
 
-			SaveToFile("FirebaseTrackingGenerate.cs", builder.ToString());
+			if (hasError)
+			{
+				Debug.LogError("[Analytics] Generate Firebase Event aborted due to the errors above. The existing file was kept.");
+				return;
+			}
+
+			TrackingCodeGenerator.SaveToFile("FirebaseTrackingGenerate.cs", builder.ToString());
 		}
 
 		[Button("Generate User Property")]
@@ -185,60 +185,62 @@ namespace com.ktgame.analytics.tracker.firebase
 			builder.AppendLine();
 			builder.AppendLine($"namespace {PackageName}");
 			builder.AppendLine("{");
-			
+
+			var hasError = false;
+			var usedStructNames = new HashSet<string>();
+
 			foreach (var property in userPropertyData.Properties)
 			{
 				if (string.IsNullOrWhiteSpace(property.Name))
 					continue;
-				
-				var sanitizedName = Sanitize(property.Name);
 
-				builder.AppendLine($"\tpublic struct FirebaseUserProperty_{sanitizedName} : IUserPropertyData ");
-				builder.AppendLine("\t{");
-				
-				builder.AppendLine($"\t\tprivate const string PropertyName = \"{property.Name}\";");
-				builder.AppendLine("\t\tpublic string Value { get; }");
-				builder.AppendLine();
-				
-				builder.AppendLine($"\t\tpublic FirebaseUserProperty_{sanitizedName}(string value)");
-				builder.AppendLine("\t\t{");
-				builder.AppendLine("\t\t\tthis.Value = value;");
-				builder.AppendLine("\t\t}");
-        
-				builder.AppendLine("\t}");
-				builder.AppendLine();
+				var structName = $"FirebaseUserProperty_{Sanitize(property.Name)}";
+				if (!usedStructNames.Add(structName))
+				{
+					Debug.LogError($"[Analytics] User property \"{property.Name}\": struct name \"{structName}\" duplicates another property.");
+					hasError = true;
+					continue;
+				}
+
+				TrackingCodeGenerator.AppendUserPropertyStruct(builder, structName, property.Name);
 			}
 
 			builder.AppendLine("}");
-			
-			SaveToFile("FirebaseUserPropertyGenerate.cs", builder.ToString());
-			Debug.Log("<color=green>Generate User Property Successful!</color>");
+
+			if (hasError)
+			{
+				Debug.LogError("[Analytics] Generate Firebase User Property aborted due to the errors above. The existing file was kept.");
+				return;
+			}
+
+			TrackingCodeGenerator.SaveToFile("FirebaseUserPropertyGenerate.cs", builder.ToString());
 		}
-
-		private void SaveToFile(string fileName, string content)
+		
+		private void ValidateEventsInEditor()
 		{
-			var folderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
-			var filePath = Path.Combine(folderPath, fileName);
-
-			if (!Directory.Exists(folderPath))
+			foreach (var e in eventData.Events)
 			{
-				Directory.CreateDirectory(folderPath);
+				if (string.IsNullOrWhiteSpace(e.Name))
+					continue;
+
+				var eventError = FirebaseNameRules.ValidateEventName(e.Name);
+				if (eventError != null)
+					Debug.LogWarning($"[Analytics] Event \"{e.Name}\": name {eventError}.");
+
+				if (e.Params.Count > FirebaseNameRules.MaxParams)
+					Debug.LogWarning($"[Analytics] Event \"{e.Name}\": has {e.Params.Count} params (max {FirebaseNameRules.MaxParams}).");
+
+				foreach (var param in e.Params)
+				{
+					if (string.IsNullOrWhiteSpace(param.Key))
+						continue;
+					
+					var sentName = Sanitize(param.Key);
+					var paramError = FirebaseNameRules.ValidateParamName(sentName);
+					if (paramError != null)
+						Debug.LogWarning($"[Analytics] Event \"{e.Name}\": param \"{sentName}\" {paramError}.");
+				}
 			}
-
-			if (File.Exists(filePath))
-			{
-				File.Delete(filePath);
-			}
-
-			if (File.Exists(filePath + ".meta"))
-			{
-				File.Delete(filePath + ".meta");
-			}
-
-			File.WriteAllText(filePath, content, Encoding.UTF8);
-
-			AssetDatabase.ImportAsset(filePath);
-			AssetDatabase.Refresh();
 		}
 
 		private static readonly Dictionary<ValueType, string> TypeMap = new()
@@ -247,7 +249,8 @@ namespace com.ktgame.analytics.tracker.firebase
 			{ ValueType.Long, "long" },
 			{ ValueType.Float, "float" },
 			{ ValueType.Double, "double" },
-			{ ValueType.String, "string" }
+			{ ValueType.String, "string" },
+			{ ValueType.Bool, "bool" }
 		};
 
 		private static string Sanitize(string input)
@@ -261,6 +264,12 @@ namespace com.ktgame.analytics.tracker.firebase
 
 			result = result.Replace(" ", "_")
 				.Replace("-", "_");
+			
+			result = Regex.Replace(result, "[^a-zA-Z0-9_]", "");
+			if (string.IsNullOrEmpty(result))
+			{
+				return "_invalid";
+			}
 
 			if (char.IsDigit(result[0]))
 			{

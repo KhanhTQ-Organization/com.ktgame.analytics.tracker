@@ -1,4 +1,4 @@
-using com.ktgame.core;
+﻿using com.ktgame.core;
 
 namespace com.ktgame.analytics.tracker.firebase
 {
@@ -9,5 +9,9 @@ namespace com.ktgame.analytics.tracker.firebase
 		void SetUserProperty(IUserPropertyData userPropertyData);
 
 		void LogEvent(IEventData eventData);
+		
+		void LogEvent(string eventName, params AnalyticParam[] parameters);
+		
+		void SetConsent(bool analyticsStorage, bool adStorage, bool adUserData, bool adPersonalization);
 	}
 }

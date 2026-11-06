@@ -9,10 +9,8 @@ using AdjustSdk;
 #endif
 
 #if UNITY_EDITOR
-using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using UnityEditor;
 #endif
 
 namespace com.ktgame.analytics.tracker.adjust
@@ -139,77 +137,47 @@ namespace com.ktgame.analytics.tracker.adjust
 			builder.AppendLine($"namespace {PackageName}");
 			builder.AppendLine("{");
 
+			var hasError = false;
+			var usedStructNames = new HashSet<string>();
+
 			foreach (var e in eventData.Events)
 			{
 				if (string.IsNullOrWhiteSpace(e.Name) || string.IsNullOrWhiteSpace(e.Id))
 					continue;
 
-				var structName = Sanitize(e.Name);
-				var paramDefs = new List<string>();
-
-				builder.AppendLine($"\tpublic struct AdjustTracking_{structName} : IEventData");
-				builder.AppendLine("\t{");
-				builder.AppendLine($"\t\tprivate const string EventName = \"{e.Id}\";");
+				var structName = $"AdjustTracking_{Sanitize(e.Name)}";
+				var parameters = new List<TrackingCodeGenerator.GeneratedParam>();
 
 				foreach (var param in e.Params)
 				{
 					if (string.IsNullOrWhiteSpace(param.Key))
 						continue;
 
-					var key = Sanitize(param.Key);
-					var type = TypeMap.TryGetValue(param.Type, out var mapped)
-						? mapped
-						: "string";
-
-					paramDefs.Add($"{type} {key}");
-					builder.AppendLine($"\t\tpublic {type} {key} {{ get; }}");
-				}
-
-				if (paramDefs.Count > 0)
-				{
-					builder.AppendLine();
-					builder.AppendLine($"\t\tpublic AdjustTracking_{structName}({string.Join(", ", paramDefs)})");
-					builder.AppendLine("\t\t{");
-
-					foreach (var param in e.Params)
+					parameters.Add(new TrackingCodeGenerator.GeneratedParam
 					{
-						if (string.IsNullOrWhiteSpace(param.Key))
-							continue;
-
-						var key = Sanitize(param.Key);
-						builder.AppendLine($"\t\t\tthis.{key} = {key};");
-					}
-
-					builder.AppendLine("\t\t}");
+						TypeName = TypeMap.TryGetValue(param.Type, out var mapped) ? mapped : "string",
+						Name = Sanitize(param.Key)
+					});
 				}
 
-				builder.AppendLine("\t}");
-				builder.AppendLine();
+				if (!TrackingCodeGenerator.ValidateEvent($"Adjust event \"{e.Name}\"", structName, parameters, usedStructNames))
+				{
+					hasError = true;
+					continue;
+				}
+
+				TrackingCodeGenerator.AppendEventStruct(builder, structName, e.Id, parameters);
 			}
 
 			builder.AppendLine("}");
 
-			SaveToFile("AdjustTrackingGenerate.cs", builder.ToString());
-		}
+			if (hasError)
+			{
+				Debug.LogError("[Analytics] Generate Adjust Event aborted due to the errors above. The existing file was kept.");
+				return;
+			}
 
-		private void SaveToFile(string fileName, string content)
-		{
-			var folderPath = Path.Combine(Application.dataPath, "Scripts/Generated");
-			var filePath = Path.Combine(folderPath, fileName);
-
-			if (!Directory.Exists(folderPath))
-				Directory.CreateDirectory(folderPath);
-
-			if (File.Exists(filePath))
-				File.Delete(filePath);
-
-			if (File.Exists(filePath + ".meta"))
-				File.Delete(filePath + ".meta");
-
-			File.WriteAllText(filePath, content, Encoding.UTF8);
-
-			AssetDatabase.ImportAsset(filePath);
-			AssetDatabase.Refresh();
+			TrackingCodeGenerator.SaveToFile("AdjustTrackingGenerate.cs", builder.ToString());
 		}
 
 #endif

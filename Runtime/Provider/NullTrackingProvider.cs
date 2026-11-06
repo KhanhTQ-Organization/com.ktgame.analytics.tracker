@@ -8,6 +8,11 @@ namespace com.ktgame.analytics.tracker
 		{
 			IsReady = false;
 		}
+		
+		public NullTrackingProvider(bool isReady)
+		{
+			IsReady = isReady;
+		}
 
 		public ITrackingProvider SetUserId(string id)
 		{

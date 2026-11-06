@@ -22,7 +22,7 @@ namespace com.ktgame.analytics.tracker.editor
 
 			if (AssetDatabase.IsValidFolder($"Packages/{PackageName}"))
 			{
-				AssetDatabase.CopyAsset($"Packages/{PackageName}/Runtime/link.xml", $"Assets/Plugins/Unimob/Settings/{PackageName}/link.xml");
+				AssetDatabase.CopyAsset($"Packages/{PackageName}/Runtime/link.xml", $"Assets/Plugins/Ktgame/Settings/{PackageName}/link.xml");
 			}
 		}
 	}
